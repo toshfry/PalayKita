@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="hero-card dashboard-hero">
+    <div>
+        <p class="eyebrow">{{ settings.business_name }}</p>
+        <h1>How much cash came in today?</h1>
+        <p class="muted">{{ summary.transactions_today }} transaction(s) today · Local {{ summary.local_transactions_today }} · Commercial {{ summary.commercial_transactions_today }}</p>
+    </div>
+    <div class="hero-amount">
+        {{ money(summary.cash_collected_today) }}
+        <small>Cash Collected Today</small>
+    </div>
+</div>
+
+<div class="quick-grid dashboard-quick-grid">
+    <a class="quick-btn green" href="{{ url_for('main.new_transaction') }}">+ New Transaction</a>
+    <a class="quick-btn green" href="{{ url_for('main.new_transaction', type='commercial') }}">+ Commercial Sale</a>
+    <a class="quick-btn" href="{{ url_for('main.transactions') }}">Local Transactions</a>
+    <a class="quick-btn" href="{{ url_for('main.commercial_customers') }}">Commercial Customers</a>
+    <a class="quick-btn gold" href="{{ url_for('main.unpaid') }}">Unpaid Balances</a>
+    <form method="post" action="{{ url_for('main.generate_report', report_type='today') }}">
+        <button class="quick-btn full" type="submit">Generate Today’s Excel Report</button>
+    </form>
+</div>
+
+<div class="dashboard-split-grid">
+    <article class="split-metric-card">
+        <div class="split-metric-head">
+            <span>Transactions Today</span>
+            <strong data-testid="transactions-total">{{ summary.metrics.transactions.total }}</strong>
+        </div>
+        <div class="split-metric-rows">
+            <div><span>Local</span><strong data-testid="transactions-local">{{ summary.metrics.transactions.local }}</strong></div>
+            <div><span>Commercial</span><strong data-testid="transactions-commercial">{{ summary.metrics.transactions.commercial }}</strong></div>
+            <div class="total-row"><span>Total</span><strong>{{ summary.metrics.transactions.total }}</strong></div>
+        </div>
+    </article>
+
+    <article class="split-metric-card primary">
+        <div class="split-metric-head">
+            <span>Income Today</span>
+            <strong data-testid="income-total">{{ money(summary.metrics.income.total) }}</strong>
+        </div>
+        <div class="split-metric-rows">
+            <div><span>Local</span><strong data-testid="income-local">{{ money(summary.metrics.income.local) }}</strong></div>
+            <div><span>Commercial</span><strong data-testid="income-commercial">{{ money(summary.metrics.income.commercial) }}</strong></div>
+            <div class="total-row"><span>Total</span><strong>{{ money(summary.metrics.income.total) }}</strong></div>
+        </div>
+    </article>
+
+    <article class="split-metric-card">
+        <div class="split-metric-head">
+            <span>Paid Today</span>
+            <strong data-testid="paid-total">{{ money(summary.metrics.paid.total) }}</strong>
+        </div>
+        <div class="split-metric-rows">
+            <div><span>Local</span><strong data-testid="paid-local">{{ money(summary.metrics.paid.local) }}</strong></div>
+            <div><span>Commercial</span><strong data-testid="paid-commercial">{{ money(summary.metrics.paid.commercial) }}</strong></div>
+            <div class="total-row"><span>Total</span><strong>{{ money(summary.metrics.paid.total) }}</strong></div>
+        </div>
+    </article>
+
+    <article class="split-metric-card danger">
+        <div class="split-metric-head">
+            <span>Unpaid Balance Today</span>
+            <strong data-testid="unpaid-total">{{ money(summary.metrics.unpaid.total) }}</strong>
+        </div>
+        <div class="split-metric-rows">
+            <div><span>Local</span><strong data-testid="unpaid-local">{{ money(summary.metrics.unpaid.local) }}</strong></div>
+            <div><span>Commercial</span><strong data-testid="unpaid-commercial">{{ money(summary.metrics.unpaid.commercial) }}</strong></div>
+            <div class="total-row"><span>Total</span><strong>{{ money(summary.metrics.unpaid.total) }}</strong></div>
+        </div>
+    </article>
+
+    <article class="split-metric-card">
+        <div class="split-metric-head">
+            <span>Unpaid Transactions</span>
+            <strong data-testid="unpaid-accounts-total">{{ summary.metrics.unpaid_accounts.total }}</strong>
+        </div>
+        <div class="split-metric-rows">
+            <div><span>Local unpaid transactions</span><strong data-testid="unpaid-accounts-local">{{ summary.metrics.unpaid_accounts.local }}</strong></div>
+            <div><span>Commercial unpaid transactions</span><strong data-testid="unpaid-accounts-commercial">{{ summary.metrics.unpaid_accounts.commercial }}</strong></div>
+            <div class="total-row"><span>Total</span><strong>{{ summary.metrics.unpaid_accounts.total }}</strong></div>
+        </div>
+    </article>
+</div>
+
+<div class="dashboard-summary-grid">
+    <section class="summary-panel local-panel">
+        <div class="summary-panel-head">
+            <div>
+                <p class="eyebrow">Local Summary</p>
+                <h2>Local Milling</h2>
+            </div>
+            <span class="pill green-pill">Kilos</span>
+        </div>
+        <div class="summary-list">
+            <div><span>Local transactions today</span><strong>{{ summary.local_summary.transactions }}</strong></div>
+            <div><span>Total kilos today</span><strong data-testid="local-kilos">{{ "%.2f"|format(summary.local_summary.kilos) }} kg</strong></div>
+            <div><span>Local income</span><strong>{{ money(summary.local_summary.income) }}</strong></div>
+            <div><span>Local paid</span><strong>{{ money(summary.local_summary.paid) }}</strong></div>
+            <div><span>Local unpaid balance</span><strong>{{ money(summary.local_summary.unpaid) }}</strong></div>
+        </div>
+    </section>
+
+    <section class="summary-panel commercial-panel">
+        <div class="summary-panel-head">
+            <div>
+                <p class="eyebrow">Commercial Summary</p>
+                <h2>Commercial Sales</h2>
+            </div>
+            <span class="pill">Sacks</span>
+        </div>
+        <div class="summary-list">
+            <div><span>Commercial transactions today</span><strong>{{ summary.commercial_summary.transactions }}</strong></div>
+            <div><span>Total sacks today</span><strong data-testid="commercial-sacks">{{ "%.2f"|format(summary.commercial_summary.sacks) }} sacks</strong></div>
+            <div><span>Commercial income</span><strong>{{ money(summary.commercial_summary.income) }}</strong></div>
+            <div><span>Commercial paid</span><strong>{{ money(summary.commercial_summary.paid) }}</strong></div>
+            <div><span>Commercial unpaid balance</span><strong>{{ money(summary.commercial_summary.unpaid) }}</strong></div>
+            <div><span>Commercial unpaid customers</span><strong>{{ summary.commercial_summary.unpaid_customers }}</strong></div>
+        </div>
+    </section>
+</div>
+
+<section class="dashboard-recent-panel" id="recent-transactions">
+    <div class="section-head">
+        <div>
+            <h2>Recent Transactions</h2>
+            <p class="muted">Filter by transaction type or payment status.</p>
+        </div>
+    </div>
+
+    <div class="recent-filter-tabs">
+        {% for option in recent_filters %}
+        <a class="{% if recent_filter == option %}active{% endif %}" href="{{ url_for('main.dashboard', recent_filter=option, _anchor='recent-transactions') }}">{{ option }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="table-card dashboard-recent-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Transaction No.</th>
+                    <th>Customer</th>
+                    <th>Quantity</th>
+                    <th>Income</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for transaction in recent_transactions %}
+                <tr data-type="{{ transaction.type }}" data-status="{{ transaction.payment_status }}">
+                    <td><span class="type-pill {{ transaction.type|lower }}">{{ transaction.type }}</span></td>
+                    <td>{{ transaction.transaction_date.strftime('%Y-%m-%d') if transaction.transaction_date else '' }}</td>
+                    <td>{{ transaction.transaction_number }}</td>
+                    <td>{{ transaction.customer }}</td>
+                    <td>{{ transaction.quantity }}</td>
+                    <td>{{ money(transaction.income) }}</td>
+                    <td>{{ money(transaction.paid) }}</td>
+                    <td>{{ money(transaction.balance) }}</td>
+                    <td><span class="badge {{ transaction.payment_status|lower }}">{{ transaction.payment_status }}</span></td>
+                    <td class="actions"><a href="{{ transaction.url }}">View</a></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="10" class="empty">No recent transactions found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Activation | PalayKita</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#16A34A">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+
+<body class="activation-body">
+    <main class="activation-page">
+        <section class="activation-card">
+            <div class="activation-brand">
+                <div class="login-logo">PK</div>
+                <div>
+                    <h1>PalayKita</h1>
+                    <p>Software Activation</p>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <h2>Activation Required</h2>
+            <p class="muted">Send this Computer ID to the developer, then paste the activation key below.</p>
+
+            {% if status and status.message %}
+            <div class="license-alert {% if status.activated %}ok{% else %}warn{% endif %}">
+                {{ status.message }}
+            </div>
+            {% endif %}
+
+            <label>Computer ID</label>
+            <div class="copy-field">
+                <input id="computerId" type="text" value="{{ computer_id }}" readonly>
+                <button class="btn btn-light" type="button" onclick="copyText('{{ computer_id }}')">Copy</button>
+            </div>
+
+            <form method="post" class="activation-form">
+                <label>Activation Key</label>
+                <textarea name="activation_key" rows="7" placeholder="Paste activation key here..." required></textarea>
+
+                <button class="btn btn-primary full" type="submit">Activate PalayKita</button>
+            </form>
+
+            <p class="activation-note">This license is locked to this computer only.</p>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

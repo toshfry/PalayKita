@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>{{ code }} | PalayKita</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.png') }}">
+    <style>
+        :root {
+            --green: #16A34A;
+            --green-dark: #15803D;
+            --ink: #111827;
+            --muted: #6B7280;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: #F8FAFC;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+
+        .error-card {
+            width: min(440px, 100%);
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 22px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+            padding: 40px 32px;
+            text-align: center;
+        }
+
+        .error-code {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--green-dark);
+            letter-spacing: 1px;
+        }
+
+        .error-brand {
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .error-title {
+            margin: 18px 0 8px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .error-message {
+            margin: 0 0 24px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .error-btn {
+            display: inline-block;
+            padding: 12px 26px;
+            border-radius: 999px;
+            background: var(--green);
+            color: #FFFFFF;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .error-btn:hover {
+            background: var(--green-dark);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="error-card">
+        <div class="error-code">{{ code }}</div>
+        <div class="error-brand">PalayKita</div>
+        <h1 class="error-title">{{ title }}</h1>
+        <p class="error-message">{{ message }}</p>
+        <a class="error-btn" href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    </div>
+</body>
+
+</html>

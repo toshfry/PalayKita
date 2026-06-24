@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section-head">
+    <div>
+        <h1>Unpaid Balances</h1>
+        <p class="muted">Unpaid and partial transactions only</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.new_transaction') }}">+ New</a>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>Contact</th>
+                <th>Transaction No.</th>
+                <th>Kilos</th>
+                <th>Net</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr>
+                <td>{{ t.transaction_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ t.created_at.strftime('%I:%M %p') }}</td>
+                <td>{{ t.customer_name or 'Walk-in / Not specified' }}</td>
+                <td>{{ t.contact_number or '-' }}</td>
+                <td>{{ t.transaction_number }}</td>
+                <td>{{ "%.2f"|format(t.kilos_milled) }}</td>
+                <td>{{ money(t.net_amount) }}</td>
+                <td>{{ money(t.amount_paid) }}</td>
+                <td>{{ money(t.balance) }}</td>
+                <td><span class="badge {{ t.payment_status|lower }}">{{ t.payment_status }}</span></td>
+                <td>{{ t.notes or '' }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('main.view_transaction', transaction_id=t.id) }}">View</a>
+                    <button type="button" onclick="openPaymentModal({{ t.id }}, '{{ t.transaction_number }}', 'local', {{ t.balance }})">Pay</button>
+
+                    <form data-preserve-scroll method="post" action="{{ url_for('main.mark_paid', transaction_id=t.id) }}">
+                        <button type="submit">Mark Paid</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="12" class="empty">No unpaid balances.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="section-head small">
+    <h2>Commercial Balances</h2>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>Contact</th>
+                <th>Transaction No.</th>
+                <th>Sacks</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in commercial_transactions %}
+            <tr>
+                <td>{{ t.transaction_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ t.created_at.strftime('%I:%M %p') }}</td>
+                <td>{{ t.customer.name }}</td>
+                <td>{{ t.customer.contact_number or '-' }}</td>
+                <td>{{ t.transaction_number }}</td>
+                <td>{{ "%.2f"|format(t.number_of_sacks) }}</td>
+                <td>{{ money(t.total_amount) }}</td>
+                <td>{{ money(t.amount_paid) }}</td>
+                <td>{{ money(t.balance) }}</td>
+                <td><span class="badge {{ t.payment_status|lower }}">{{ t.payment_status }}</span></td>
+                <td>{{ t.notes or '' }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('main.commercial_customer_detail', customer_id=t.customer_id) }}">View</a>
+                    <a href="{{ url_for('main.edit_commercial_transaction', transaction_id=t.id, next=request.full_path) }}">Edit</a>
+                    <button type="button" onclick="openPaymentModal({{ t.id }}, '{{ t.transaction_number }}', 'commercial', {{ t.balance }})">Pay</button>
+
+                    <form data-preserve-scroll method="post" action="{{ url_for('main.mark_commercial_paid', transaction_id=t.id) }}">
+                        <button type="submit">Mark Paid</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="12" class="empty">No commercial unpaid balances.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal hidden" id="paymentModal">
+    <div class="modal-card">
+        <h2>Record Payment</h2>
+        <p id="paymentTransaction"></p>
+        <p class="payment-balance" id="paymentBalance"></p>
+
+        <form method="post" id="paymentForm">
+            <label>Payment Amount</label>
+            <input type="number" step="0.01" min="0" name="payment_amount" required>
+
+            <label>Payment Method</label>
+            <select name="payment_method">
+                <option>Cash</option>
+                <option>GCash</option>
+                <option>Bank Transfer</option>
+                <option>Other</option>
+            </select>
+
+            <label>Payment Date</label>
+            <input type="date" name="payment_date" value="{{ today_date.strftime('%Y-%m-%d') }}">
+
+            <label>Notes</label>
+            <textarea name="payment_notes" rows="2"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn btn-light" type="button" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn btn-primary" type="submit">Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

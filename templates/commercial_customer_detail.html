@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section-head">
+    <div>
+        <h1>{{ customer.name }}</h1>
+        <p class="muted">{{ customer.contact_number or 'No contact number' }}{% if customer.address %} · {{ customer.address }}{% endif %}</p>
+    </div>
+    <div class="section-actions">
+        <a class="btn btn-light" href="{{ url_for('main.commercial_customers') }}">Back</a>
+        {% if customer.status == 'Active' %}
+        <a class="btn btn-primary" href="{{ url_for('main.new_transaction', type='commercial', customer_id=customer.id) }}">+ New Sale</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="stat-grid compact-stats">
+    <div class="stat-card">
+        <span>Total Sacks</span>
+        <strong>{{ "%.2f"|format(totals.sacks) }}</strong>
+    </div>
+    <div class="stat-card primary">
+        <span>Total Amount</span>
+        <strong>{{ money(totals.amount) }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Total Paid</span>
+        <strong>{{ money(totals.paid) }}</strong>
+    </div>
+    <div class="stat-card danger-soft">
+        <span>Total Balance</span>
+        <strong>{{ money(totals.balance) }}</strong>
+    </div>
+</div>
+
+<section class="form-card customer-detail-card">
+    <div class="card-title-row">
+        <div>
+            <h2>Customer Details</h2>
+        </div>
+        <span class="status-badge {% if customer.status == 'Active' %}active{% else %}disabled{% endif %}">
+            {{ customer.status }}
+        </span>
+    </div>
+    <div class="customer-meta-grid">
+        <div>
+            <span>Contact Number</span>
+            <strong>{{ customer.contact_number or '-' }}</strong>
+        </div>
+        <div>
+            <span>Address</span>
+            <strong>{{ customer.address or '-' }}</strong>
+        </div>
+    </div>
+    {% if customer.notes %}
+    <p class="muted customer-notes">{{ customer.notes }}</p>
+    {% endif %}
+</section>
+
+<div class="section-head small">
+    <h2>Transaction History</h2>
+</div>
+
+<div class="table-card transaction-table-card">
+    <table class="commercial-customer-transaction-table">
+        <colgroup>
+            <col class="col-date">
+            <col class="col-time">
+            <col class="col-number">
+            <col class="col-quantity">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-status">
+            <col class="col-notes">
+            <col class="col-actions">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Transaction No.</th>
+                <th>Sacks</th>
+                <th>Price/Sack</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr>
+                <td>{{ t.transaction_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ t.created_at.strftime('%I:%M %p') }}</td>
+                <td>{{ t.transaction_number }}</td>
+                <td>{{ "%.2f"|format(t.number_of_sacks) }}</td>
+                <td>{{ money(t.price_per_sack) }}</td>
+                <td>{{ money(t.total_amount) }}</td>
+                <td>{{ money(t.amount_paid) }}</td>
+                <td>{{ money(t.balance) }}</td>
+                <td><span class="badge {{ t.payment_status|lower }}">{{ t.payment_status }}</span></td>
+                <td class="table-text-cell notes-cell">{{ t.notes or '' }}</td>
+                <td class="actions-cell">
+                    <div class="table-actions" aria-label="Actions for {{ t.transaction_number }}">
+                    <a class="table-action" href="{{ url_for('main.edit_commercial_transaction', transaction_id=t.id, next=request.full_path) }}">Edit</a>
+                    {% if t.payment_status != "Paid" %}
+                    <button class="table-action" type="button" onclick="openPaymentModal({{ t.id }}, '{{ t.transaction_number }}', 'commercial', {{ t.balance }})">Pay</button>
+                    <form data-preserve-scroll method="post" action="{{ url_for('main.mark_commercial_paid', transaction_id=t.id) }}">
+                        <button class="table-action" type="submit">Mark Paid</button>
+                    </form>
+                    {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="11" class="empty">No commercial transactions yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="section-head small">
+    <h2>Payment History</h2>
+</div>
+
+<div class="table-card transaction-table-card">
+    <table class="commercial-customer-transaction-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Transaction No.</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in payments %}
+            <tr>
+                <td>{{ p.payment_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ p.transaction.transaction_number }}</td>
+                <td>{{ money(p.amount) }}</td>
+                <td>{{ p.payment_method or 'Cash' }}</td>
+                <td class="table-text-cell notes-cell">{{ p.notes or '' }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5" class="empty">No payments recorded yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal hidden" id="paymentModal">
+    <div class="modal-card">
+        <h2>Record Payment</h2>
+        <p id="paymentTransaction"></p>
+        <p class="payment-balance" id="paymentBalance"></p>
+
+        <form method="post" id="paymentForm">
+            <label>Payment Amount</label>
+            <input type="number" step="0.01" min="0" name="payment_amount" required>
+
+            <label>Payment Date</label>
+            <input type="date" name="payment_date" value="{{ today_date.strftime('%Y-%m-%d') }}">
+
+            <label>Notes</label>
+            <textarea name="payment_notes" rows="2"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn btn-light" type="button" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn btn-primary" type="submit">Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

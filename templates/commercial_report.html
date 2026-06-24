@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section-head">
+    <div>
+        <h1>Commercial Report</h1>
+        <p class="muted">{{ start.strftime('%Y-%m-%d') }} to {{ end.strftime('%Y-%m-%d') }}</p>
+    </div>
+    <a class="btn btn-light" href="{{ url_for('main.reports_page') }}">Back</a>
+</div>
+
+<form class="filter-card commercial-report-filter" method="get">
+    <div>
+        <label>Customer</label>
+        <select name="customer_id">
+            <option value="all">All Customers</option>
+            {% for customer in customers %}
+            <option value="{{ customer.id }}" {% if selected_customer_id == customer.id %}selected{% endif %}>{{ customer.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Start Date</label>
+        <input type="date" name="start_date" value="{{ start.strftime('%Y-%m-%d') }}">
+    </div>
+
+    <div>
+        <label>End Date</label>
+        <input type="date" name="end_date" value="{{ end.strftime('%Y-%m-%d') }}">
+    </div>
+
+    <div>
+        <label>Status</label>
+        <select name="status">
+            <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+            <option value="Paid" {% if status == 'Paid' %}selected{% endif %}>Paid</option>
+            <option value="Partial" {% if status == 'Partial' %}selected{% endif %}>Partial</option>
+            <option value="Unpaid" {% if status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+        </select>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Apply</button>
+</form>
+
+<form method="post" action="{{ url_for('main.export_commercial_report') }}" class="report-export-form">
+    <input type="hidden" name="customer_id" value="{{ selected_customer_id or 'all' }}">
+    <input type="hidden" name="start_date" value="{{ start.strftime('%Y-%m-%d') }}">
+    <input type="hidden" name="end_date" value="{{ end.strftime('%Y-%m-%d') }}">
+    <input type="hidden" name="status" value="{{ status }}">
+    <button class="btn btn-primary" type="submit">Generate Commercial Excel Report</button>
+</form>
+
+<div class="stat-grid compact-stats">
+    <div class="stat-card">
+        <span>Total Sacks</span>
+        <strong>{{ "%.2f"|format(totals.sacks) }}</strong>
+    </div>
+    <div class="stat-card primary">
+        <span>Total Amount</span>
+        <strong>{{ money(totals.amount) }}</strong>
+    </div>
+    <div class="stat-card">
+        <span>Total Paid</span>
+        <strong>{{ money(totals.paid) }}</strong>
+    </div>
+    <div class="stat-card danger-soft">
+        <span>Total Balance</span>
+        <strong>{{ money(totals.balance) }}</strong>
+    </div>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Transaction No.</th>
+                <th>Sacks</th>
+                <th>Price/Sack</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr>
+                <td>{{ t.customer.name }}</td>
+                <td>{{ t.transaction_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ t.transaction_number }}</td>
+                <td>{{ "%.2f"|format(t.number_of_sacks) }}</td>
+                <td>{{ money(t.price_per_sack) }}</td>
+                <td>{{ money(t.total_amount) }}</td>
+                <td>{{ money(t.amount_paid) }}</td>
+                <td>{{ money(t.balance) }}</td>
+                <td><span class="badge {{ t.payment_status|lower }}">{{ t.payment_status }}</span></td>
+                <td>{{ t.notes or '' }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="10" class="empty">No commercial transactions found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

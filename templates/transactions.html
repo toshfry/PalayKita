@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section-head">
+    <div>
+        <h1>Transactions</h1>
+        <p class="muted">{{ start.strftime('%Y-%m-%d') }} to {{ end.strftime('%Y-%m-%d') }}</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('main.new_transaction') }}">+ New</a>
+</div>
+
+<div class="transaction-type-tabs" aria-label="Transaction type filters">
+    <a class="{% if transaction_type == 'all' %}active{% endif %}" href="{{ type_filter_urls.all }}">All Transactions</a>
+    <a class="{% if transaction_type == 'local' %}active{% endif %}" href="{{ type_filter_urls.local }}">Local Transactions</a>
+    <a class="{% if transaction_type == 'commercial' %}active{% endif %}" href="{{ type_filter_urls.commercial }}">Commercial Transactions</a>
+</div>
+
+<form class="filter-card transactions-filter-card" method="get">
+    <div>
+        <label>Date Filter</label>
+        <select name="filter">
+            <option value="today" {% if filter_name == 'today' %}selected{% endif %}>Today</option>
+            <option value="yesterday" {% if filter_name == 'yesterday' %}selected{% endif %}>Yesterday</option>
+            <option value="week" {% if filter_name == 'week' %}selected{% endif %}>This Week</option>
+            <option value="custom" {% if filter_name == 'custom' %}selected{% endif %}>Custom Date</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Custom Date</label>
+        <input type="date" name="custom_date" value="{{ custom_date or '' }}">
+    </div>
+
+    <div>
+        <label>Type</label>
+        <select name="type">
+            <option value="all" {% if transaction_type == 'all' %}selected{% endif %}>All</option>
+            <option value="local" {% if transaction_type == 'local' %}selected{% endif %}>Local</option>
+            <option value="commercial" {% if transaction_type == 'commercial' %}selected{% endif %}>Commercial</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Status</label>
+        <select name="status">
+            <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+            <option value="Paid" {% if status == 'Paid' %}selected{% endif %}>Paid</option>
+            <option value="Partial" {% if status == 'Partial' %}selected{% endif %}>Partial</option>
+            <option value="Unpaid" {% if status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+        </select>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Apply</button>
+</form>
+
+<div class="table-card transaction-table-card">
+    <table class="transaction-table">
+        <colgroup>
+            <col class="col-type">
+            <col class="col-number">
+            <col class="col-time">
+            <col class="col-customer">
+            <col class="col-quantity">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-money">
+            <col class="col-status">
+            <col class="col-method">
+            <col class="col-actions">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Transaction No.</th>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>Quantity</th>
+                <th>Gross</th>
+                <th>Chaff</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Method</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr>
+                <td><span class="type-chip {{ t.payment_type }}">{{ t.type }}</span></td>
+                <td>{{ t.transaction_number }}</td>
+                <td>{{ t.created_at.strftime('%I:%M %p') }}</td>
+                <td class="table-text-cell">{{ t.customer }}</td>
+                <td>{{ t.quantity }}</td>
+                <td>{{ money(t.gross) }}</td>
+                <td>{% if t.chaff is not none %}{{ money(t.chaff) }}{% else %}-{% endif %}</td>
+                <td>{{ money(t.total) }}</td>
+                <td>{{ money(t.paid) }}</td>
+                <td>{{ money(t.balance) }}</td>
+                <td><span class="badge {{ t.payment_status|lower }}">{{ t.payment_status }}</span></td>
+                <td>{{ t.payment_method }}</td>
+                <td class="actions-cell">
+                    <div class="table-actions" aria-label="Actions for {{ t.transaction_number }}">
+                    <a class="table-action" href="{{ t.view_url }}">View</a>
+                    {% if t.edit_url %}
+                    <a class="table-action" href="{{ t.edit_url }}">Edit</a>
+                    {% endif %}
+
+                    {% if t.payment_status != "Paid" %}
+                    <button class="table-action" type="button"
+                        data-payment-open
+                        data-payment-id="{{ t.id }}"
+                        data-payment-number="{{ t.transaction_number }}"
+                        data-payment-type="{{ t.payment_type }}"
+                        data-payment-balance="{{ t.balance }}">Pay</button>
+                    <form data-preserve-scroll method="post" action="{{ t.mark_paid_url }}">
+                        <button class="table-action" type="submit">Mark Paid</button>
+                    </form>
+                    {% endif %}
+
+                    {% if t.delete_url %}
+                    <form method="post" action="{{ t.delete_url }}" onsubmit="return confirm('Delete this local transaction?')">
+                        <button class="table-action danger-link" type="submit">Delete</button>
+                    </form>
+                    {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="13" class="empty">No transactions found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal hidden" id="paymentModal">
+    <div class="modal-card">
+        <h2>Record Payment</h2>
+        <p id="paymentTransaction"></p>
+        <p class="payment-balance" id="paymentBalance"></p>
+
+        <form method="post" id="paymentForm">
+            <label>Payment Amount</label>
+            <input type="number" step="0.01" min="0" name="payment_amount" required>
+
+            <label>Payment Method</label>
+            <select name="payment_method">
+                <option>Cash</option>
+                <option>GCash</option>
+                <option>Bank Transfer</option>
+                <option>Other</option>
+            </select>
+
+            <label>Payment Date</label>
+            <input type="date" name="payment_date" value="{{ today_date.strftime('%Y-%m-%d') }}">
+
+            <label>Notes</label>
+            <textarea name="payment_notes" rows="2"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn btn-light" type="button" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn btn-primary" type="submit">Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

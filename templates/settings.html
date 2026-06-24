@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-command-head settings-command-head">
+    <div>
+        <p class="eyebrow">Admin Console</p>
+        <h1>Settings</h1>
+        <p class="muted">Control business defaults, commercial settings, server access, license, and users.</p>
+    </div>
+    <div class="command-actions">
+        <a class="btn btn-light" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <a class="btn btn-primary" href="{{ url_for('main.new_transaction') }}">+ New Transaction</a>
+    </div>
+</div>
+
+<div class="settings-overview-grid">
+    <div class="settings-overview-card">
+        <span>License</span>
+        <strong>{% if license_info.activated %}Activated{% else %}Not Activated{% endif %}</strong>
+    </div>
+    <div class="settings-overview-card">
+        <span>Wi-Fi Server</span>
+        <strong>{{ server_status.status_label }}</strong>
+    </div>
+    <div class="settings-overview-card">
+        <span>Commercial</span>
+        <strong>{% if settings_row.commercial_enabled %}Enabled{% else %}Disabled{% endif %}</strong>
+    </div>
+    <div class="settings-overview-card">
+        <span>Users</span>
+        <strong>{{ user_stats.active }} active</strong>
+    </div>
+</div>
+
+<div class="settings-console-layout">
+    <aside class="settings-sidebar settings-nav-shell" aria-label="Settings sections" data-settings-nav>
+        <div class="settings-nav-label">
+            <span>Settings Menu</span>
+            <small>Tap a section</small>
+        </div>
+        <p class="settings-touch-hint">Swipe sideways to move between sections.</p>
+        <a class="settings-nav-link" href="#business-settings">
+            <span class="settings-nav-index">01</span>
+            <span>Business</span>
+        </a>
+        <a class="settings-nav-link" href="#commercial-settings">
+            <span class="settings-nav-index">02</span>
+            <span>Commercial</span>
+        </a>
+        <a class="settings-nav-link" href="#server-control">
+            <span class="settings-nav-index">03</span>
+            <span>Server</span>
+        </a>
+        <a class="settings-nav-link" href="#license-activation">
+            <span class="settings-nav-index">04</span>
+            <span>License</span>
+        </a>
+        <a class="settings-nav-link" href="#user-management">
+            <span class="settings-nav-index">05</span>
+            <span>Users</span>
+        </a>
+        <a class="settings-nav-link" href="#audit-log">
+            <span class="settings-nav-index">06</span>
+            <span>Audit Log</span>
+        </a>
+        <a class="settings-nav-link" href="#about-palaykita">
+            <span class="settings-nav-index">07</span>
+            <span>About</span>
+        </a>
+    </aside>
+
+    <div class="settings-main-stack">
+        <form class="settings-panel settings-business-panel" method="post" action="{{ url_for('main.settings') }}" id="business-settings">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Defaults</span>
+                    <h2>Business Settings</h2>
+                </div>
+                <span class="pill green-pill">Admin</span>
+            </div>
+
+            <div class="settings-subpanel">
+                <h3>Local Milling</h3>
+                <div class="premium-form-grid">
+                    <div class="span-2">
+                        <label>Business Name</label>
+                        <input type="text" name="business_name" value="{{ settings_row.business_name }}" required>
+                    </div>
+
+                    <div>
+                        <label>Default Milling Rate per Kilo</label>
+                        <input type="number" step="0.01" min="0" name="milling_rate_per_kg"
+                            value="{{ settings_row.milling_rate_per_kg }}" required>
+                    </div>
+
+                    <div>
+                        <label>Default Rice Chaff Rate per Kilo</label>
+                        <input type="number" step="0.01" min="0" name="chaff_rate_per_kg"
+                            value="{{ settings_row.chaff_rate_per_kg }}" required>
+                    </div>
+
+                    <div>
+                        <label>Currency Symbol</label>
+                        <input type="text" name="currency_symbol" value="{{ settings_row.currency_symbol }}" required>
+                    </div>
+
+                    <div>
+                        <label>Daily Report Generation Time</label>
+                        <input type="time" name="daily_report_time" value="{{ settings_row.daily_report_time }}">
+                    </div>
+
+                    <div class="span-2">
+                        <label>Receipt Footer</label>
+                        <textarea name="receipt_footer" rows="3">{{ settings_row.receipt_footer }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-subpanel" id="commercial-settings">
+                <h3>Commercial Defaults</h3>
+                <div class="premium-form-grid">
+                    <div>
+                        <label>Default Price per Sack</label>
+                        <input type="number" step="0.01" min="0" name="commercial_default_price_per_sack"
+                            value="{{ settings_row.commercial_default_price_per_sack }}" required>
+                    </div>
+
+                    <div>
+                        <label>Default Payment Status</label>
+                        <select name="commercial_default_payment_status">
+                            <option value="Unpaid" {% if settings_row.commercial_default_payment_status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                            <option value="Partial" {% if settings_row.commercial_default_payment_status == 'Partial' %}selected{% endif %}>Partial</option>
+                            <option value="Paid" {% if settings_row.commercial_default_payment_status == 'Paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+
+                    <div class="span-2">
+                        <label>Receipt / Report Label</label>
+                        <input type="text" name="commercial_receipt_label" value="{{ settings_row.commercial_receipt_label }}" required>
+                    </div>
+                </div>
+
+                <div class="settings-toggle-grid">
+                    <label class="premium-toggle">
+                        <span>
+                            <strong>Enable Commercial Transactions</strong>
+                            <small>Show commercial customer and per-sack transaction tools.</small>
+                        </span>
+                        <input type="checkbox" name="commercial_enabled" {% if settings_row.commercial_enabled %}checked{% endif %}>
+                    </label>
+
+                    <label class="premium-toggle">
+                        <span>
+                            <strong>Show Commercial Notes Field</strong>
+                            <small>Allow notes in commercial transactions and reports.</small>
+                        </span>
+                        <input type="checkbox" name="commercial_notes_enabled" {% if settings_row.commercial_notes_enabled %}checked{% endif %}>
+                    </label>
+
+                    <label class="premium-toggle">
+                        <span>
+                            <strong>Auto-generate Daily Excel Report</strong>
+                            <small>Generate when the app is open after the selected time.</small>
+                        </span>
+                        <input type="checkbox" name="auto_generate_daily_report" {% if settings_row.auto_generate_daily_report %}checked{% endif %}>
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-subpanel" id="ticket-settings">
+                <h3>Local Ticket Printing</h3>
+                <div class="premium-form-grid">
+                    <div>
+                        <label>Paper Size</label>
+                        <input type="text" name="ticket_paper_size" value="{{ settings_row.ticket_paper_size }}" readonly>
+                    </div>
+
+                    <div>
+                        <label>Rice Mill Name</label>
+                        <input type="text" name="ticket_mill_name" value="{{ settings_row.ticket_mill_name }}" required>
+                    </div>
+
+                    <div class="span-2">
+                        <label>Footer Message</label>
+                        <input type="text" name="ticket_footer_message" value="{{ settings_row.ticket_footer_message }}" required>
+                    </div>
+                </div>
+
+                <div class="settings-toggle-grid">
+                    <label class="premium-toggle">
+                        <span>
+                            <strong>Enable Local Ticket Printing</strong>
+                            <small>Allow printing 80mm thermal tickets for local transactions.</small>
+                        </span>
+                        <input type="checkbox" name="ticket_printing_enabled" {% if settings_row.ticket_printing_enabled %}checked{% endif %}>
+                    </label>
+
+                    <label class="premium-toggle">
+                        <span>
+                            <strong>Show Print Ticket After Save</strong>
+                            <small>Show the Print Ticket button above the form after saving a local transaction.</small>
+                        </span>
+                        <input type="checkbox" name="ticket_show_after_save" {% if settings_row.ticket_show_after_save %}checked{% endif %}>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-footer-actions">
+                <button class="btn btn-primary" type="submit">Save Settings</button>
+            </div>
+        </form>
+
+        <section class="settings-panel ticket-tools-card" id="ticket-tools">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Local Tickets</span>
+                    <h2>Ticket Tools</h2>
+                </div>
+            </div>
+            <p class="settings-hint">Test the 80mm ticket layout or reprint the last saved local ticket. Tickets open in a new tab and print automatically.</p>
+            <div class="ticket-tools-actions">
+                <a class="btn btn-primary" href="{{ url_for('main.test_local_ticket') }}" target="_blank" rel="noopener">Test Ticket Print</a>
+                {% if last_local_ticket_id %}
+                <a class="btn btn-light" href="{{ url_for('main.local_ticket', transaction_id=last_local_ticket_id, reprint=1) }}" target="_blank" rel="noopener">Reprint Last Ticket</a>
+                {% else %}
+                <button class="btn btn-light" type="button" disabled title="No local ticket saved yet this session">Reprint Last Ticket</button>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="settings-panel server-control-card" id="server-control">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Connectivity</span>
+                    <h2>Server Control</h2>
+                </div>
+                <span class="server-status-pill {% if server_status.is_running %}online{% else %}offline{% endif %}">
+                    {{ server_status.status_label }}
+                </span>
+            </div>
+
+            <div class="settings-info-grid">
+                <div class="settings-info-tile">
+                    <span>Wi-Fi / Phone Access URL</span>
+                    <strong>{{ server_status.wifi_url }}</strong>
+                    <button class="btn btn-light" type="button" onclick="copyText('{{ server_status.wifi_url }}')">Copy IP URL</button>
+                </div>
+
+                <div class="settings-info-tile">
+                    <span>Local IP Address</span>
+                    <strong>{{ server_status.ip }}</strong>
+                    <small>Current port: {{ server_status.port }}</small>
+                </div>
+
+                <div class="settings-info-tile">
+                    <span>Desktop Local URL</span>
+                    <strong>{{ server_status.desktop_url }}</strong>
+                    <small>Used by desktop mode.</small>
+                </div>
+            </div>
+
+            <form class="settings-port-row" method="post" action="{{ url_for('main.update_server_port') }}">
+                <div>
+                    <label>Custom Wi-Fi Server Port</label>
+                    <input type="number" name="server_port" min="1024" max="65535"
+                        value="{{ server_status.configured_port or server_status.port }}" required>
+                </div>
+                <button class="btn btn-light" type="submit">Save Port</button>
+            </form>
+
+            <div class="server-detail-box">{{ server_status.status_detail }}</div>
+
+            <div class="server-actions">
+                <form method="post" action="{{ url_for('main.start_wifi_server') }}">
+                    <button class="btn btn-primary" type="submit" {% if not server_status.can_start %}disabled{% endif %}>Start Server</button>
+                </form>
+
+                <form method="post" action="{{ url_for('main.stop_wifi_server') }}"
+                    onsubmit="return confirm('Stop Wi-Fi sharing server? Desktop mode will stay open.')">
+                    <button class="btn btn-danger" type="submit" {% if not server_status.can_stop %}disabled{% endif %}>Stop Server</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="settings-panel license-card" id="license-activation">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Activation</span>
+                    <h2>License</h2>
+                </div>
+                <span class="server-status-pill {% if license_info.activated %}online{% else %}offline{% endif %}">
+                    {% if license_info.activated %}Activated{% else %}Not Activated{% endif %}
+                </span>
+            </div>
+
+            <div class="settings-info-grid license-info-grid">
+                <div class="settings-info-tile"><span>Business Name</span><strong>{{ license_info.business_name }}</strong></div>
+                <div class="settings-info-tile"><span>Owner Name</span><strong>{{ license_info.owner_name }}</strong></div>
+                <div class="settings-info-tile"><span>License Type</span><strong>{{ license_info.license_type_display }}</strong></div>
+                <div class="settings-info-tile"><span>Issued Date</span><strong>{{ license_info.issued_at_display }}</strong></div>
+                <div class="settings-info-tile"><span>Expiration Date</span><strong>{{ license_info.expires_on_display }}</strong></div>
+                <div class="settings-info-tile">
+                    <span>Days Remaining</span>
+                    <strong class="{% if 'Expired' in license_info.days_remaining or 'today' in license_info.days_remaining|lower %}danger-text{% endif %}">
+                        {{ license_info.days_remaining }}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="copy-panel">
+                <span>Computer ID</span>
+                <strong>{{ license_info.computer_id }}</strong>
+                <button class="btn btn-light" type="button" onclick="copyText('{{ license_info.computer_id }}')">Copy</button>
+            </div>
+
+            <details class="premium-inline-drawer">
+                <summary>Change License Key</summary>
+                <form method="post" action="{{ url_for('main.change_license_key') }}" class="premium-form">
+                    <label>New License Key</label>
+                    <textarea name="activation_key" rows="6" placeholder="Paste the new license key..." required></textarea>
+                    <div class="form-footer-actions">
+                        <button class="btn btn-primary" type="submit">Apply New License</button>
+                    </div>
+                </form>
+            </details>
+        </section>
+
+        <section class="settings-panel user-management-panel" id="user-management">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Access</span>
+                    <h2>User Management</h2>
+                </div>
+                <span class="pill">{{ user_stats.total }} total user(s)</span>
+            </div>
+
+            <div class="user-stats-grid">
+                <div class="mini-stat"><span>Active</span><strong>{{ user_stats.active }}</strong></div>
+                <div class="mini-stat"><span>Disabled</span><strong>{{ user_stats.disabled }}</strong></div>
+                <div class="mini-stat"><span>Admins</span><strong>{{ user_stats.admins }}</strong></div>
+                <div class="mini-stat"><span>Staff</span><strong>{{ user_stats.staff }}</strong></div>
+            </div>
+
+            <details class="directory-create-panel" open>
+                <summary>
+                    <span>Add New User</span>
+                    <small>Create a staff or admin login</small>
+                </summary>
+
+                <form method="post" action="{{ url_for('main.create_user') }}" class="premium-form" id="createUserForm">
+                    <div class="premium-form-grid">
+                        <div>
+                            <label>Full Name</label>
+                            <input type="text" name="full_name" placeholder="Optional display name">
+                        </div>
+
+                        <div>
+                            <label>Username</label>
+                            <input type="text" name="username" placeholder="example: staff1" required>
+                        </div>
+
+                        <div>
+                            <label>Password</label>
+                            <div class="password-field">
+                                <input type="password" name="password" placeholder="At least 4 characters" required>
+                                <button type="button" onclick="togglePassword(this)">Show</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label>Confirm Password</label>
+                            <input type="password" name="confirm_password" placeholder="Repeat password" required>
+                        </div>
+
+                        <div>
+                            <label>Role</label>
+                            <select name="role">
+                                <option value="staff">Staff</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+
+                        <label class="premium-toggle compact-toggle">
+                            <span><strong>Active</strong></span>
+                            <input type="checkbox" name="is_active" checked>
+                        </label>
+                    </div>
+
+                    <div class="form-footer-actions">
+                        <button class="btn btn-light" type="button" onclick="generatePassword('createUserForm')">Generate Password</button>
+                        <button class="btn btn-primary" type="submit">Create User</button>
+                    </div>
+                </form>
+            </details>
+
+            <form method="get" action="{{ url_for('main.settings') }}#user-management" class="directory-toolbar user-filter-bar premium-user-filter">
+                <div class="directory-search">
+                    <label>Search User</label>
+                    <input type="search" name="user_search" value="{{ user_search }}" placeholder="Search username or full name">
+                </div>
+
+                <div>
+                    <label>Role</label>
+                    <select name="role">
+                        <option value="all" {% if role_filter=='all' %}selected{% endif %}>All Roles</option>
+                        <option value="admin" {% if role_filter=='admin' %}selected{% endif %}>Admin</option>
+                        <option value="staff" {% if role_filter=='staff' %}selected{% endif %}>Staff</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="all" {% if status_filter=='all' %}selected{% endif %}>All Status</option>
+                        <option value="active" {% if status_filter=='active' %}selected{% endif %}>Active</option>
+                        <option value="disabled" {% if status_filter=='disabled' %}selected{% endif %}>Disabled</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" type="submit">Filter</button>
+                <a class="btn btn-light" href="{{ url_for('main.settings') }}#user-management">Clear</a>
+            </form>
+
+            <div class="user-directory">
+                {% for user in users %}
+                <article class="user-profile-card {% if not user.is_active %}disabled-user{% endif %}">
+                    <div class="user-profile-top">
+                        <div class="user-avatar large">{{ user.username[:2].upper() }}</div>
+                        <div class="user-title-block">
+                            <strong>{{ user.full_name or user.username }}</strong>
+                            <span>@{{ user.username }}</span>
+                            <div class="user-badges">
+                                <span class="role-badge {{ user.role }}">{{ user.role|title }}</span>
+                                <span class="status-badge {% if user.is_active %}active{% else %}disabled{% endif %}">
+                                    {% if user.is_active %}Active{% else %}Disabled{% endif %}
+                                </span>
+                                {% if user.id == current_user.id %}
+                                <span class="status-badge current">Current User</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="user-meta-grid">
+                        <div>
+                            <span>Created</span>
+                            <strong>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</strong>
+                        </div>
+                        <div>
+                            <span>Last Login</span>
+                            <strong>{{ user.last_login.strftime('%Y-%m-%d %I:%M %p') if user.last_login else 'Never' }}</strong>
+                        </div>
+                    </div>
+
+                    <details class="premium-inline-drawer">
+                        <summary>Edit Account</summary>
+                        <form method="post" action="{{ url_for('main.edit_user', user_id=user.id) }}" class="premium-form">
+                            <div class="premium-form-grid">
+                                <div>
+                                    <label>Full Name</label>
+                                    <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Optional">
+                                </div>
+
+                                <div>
+                                    <label>Username</label>
+                                    <input type="text" name="username" value="{{ user.username }}" required>
+                                </div>
+
+                                <div>
+                                    <label>Role</label>
+                                    <select name="role">
+                                        <option value="staff" {% if user.role=='staff' %}selected{% endif %}>Staff</option>
+                                        <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
+                                    </select>
+                                </div>
+
+                                <label class="premium-toggle compact-toggle">
+                                    <span><strong>Active</strong></span>
+                                    <input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %} {% if user.id==current_user.id %}disabled{% endif %}>
+                                </label>
+                                {% if user.id == current_user.id %}
+                                <input type="hidden" name="is_active" value="on">
+                                {% endif %}
+                            </div>
+                            <div class="form-footer-actions">
+                                <button class="btn btn-light" type="submit">Save User Details</button>
+                            </div>
+                        </form>
+                    </details>
+
+                    <details class="premium-inline-drawer password-drawer">
+                        <summary>Change Password</summary>
+                        <form method="post" action="{{ url_for('main.change_user_password', user_id=user.id) }}" class="premium-form" id="passwordForm{{ user.id }}">
+                            <div class="premium-form-grid">
+                                <div>
+                                    <label>New Password</label>
+                                    <div class="password-field">
+                                        <input type="password" name="password" placeholder="At least 4 characters" required>
+                                        <button type="button" onclick="togglePassword(this)">Show</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label>Confirm Password</label>
+                                    <input type="password" name="confirm_password" placeholder="Repeat password" required>
+                                </div>
+                            </div>
+                            <div class="form-footer-actions">
+                                <button class="btn btn-light" type="button" onclick="generatePassword('passwordForm{{ user.id }}')">Generate</button>
+                                <button class="btn btn-primary" type="submit">Update Password</button>
+                            </div>
+                        </form>
+                    </details>
+
+                    <form method="post" action="{{ url_for('main.delete_user', user_id=user.id) }}"
+                        onsubmit="return confirm('Delete {{ user.username }}? This cannot be undone.')"
+                        class="premium-danger-action">
+                        <button class="danger-link" type="submit" {% if user.id==current_user.id %}disabled title="You cannot delete your own account" {% endif %}>Delete User</button>
+                    </form>
+                </article>
+                {% else %}
+                <div class="premium-empty-state">
+                    <strong>No users found.</strong>
+                    <p class="muted">Try clearing the search or changing the filters.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="settings-panel audit-log-panel" id="audit-log">
+            <div class="settings-panel-head">
+                <div>
+                    <span class="panel-kicker">Security</span>
+                    <h2>Audit Log</h2>
+                </div>
+                <a class="btn btn-light" href="{{ url_for('main.export_audit_log',
+                    audit_search=audit_filters.search,
+                    audit_action=audit_filters.action,
+                    audit_user=audit_filters.user,
+                    audit_start=audit_filters.start,
+                    audit_end=audit_filters.end) }}">Export Excel</a>
+            </div>
+
+            <form method="get" action="{{ url_for('main.settings') }}#audit-log" class="directory-toolbar audit-filter-bar">
+                <div class="directory-search">
+                    <label>Search Audit</label>
+                    <input type="search" name="audit_search" value="{{ audit_filters.search }}" placeholder="Search action, user, or details">
+                </div>
+
+                <div>
+                    <label>Action</label>
+                    <select name="audit_action">
+                        <option value="all" {% if audit_filters.action == 'all' %}selected{% endif %}>All Actions</option>
+                        {% for action in audit_actions %}
+                        <option value="{{ action }}" {% if audit_filters.action == action %}selected{% endif %}>{{ action }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label>User</label>
+                    <select name="audit_user">
+                        <option value="all" {% if audit_filters.user == 'all' %}selected{% endif %}>All Users</option>
+                        {% for user in audit_users %}
+                        <option value="{{ user.username }}" {% if audit_filters.user == user.username %}selected{% endif %}>{{ user.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label>From</label>
+                    <input type="date" name="audit_start" value="{{ audit_filters.start }}">
+                </div>
+
+                <div>
+                    <label>To</label>
+                    <input type="date" name="audit_end" value="{{ audit_filters.end }}">
+                </div>
+
+                <div class="audit-filter-actions">
+                    <button class="btn btn-primary" type="submit">Filter</button>
+                    <a class="btn btn-light" href="{{ url_for('main.settings') }}#audit-log">Clear</a>
+                </div>
+            </form>
+
+            <div class="table-card audit-log-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td data-label="Date & Time">{{ log.created_at.strftime('%Y-%m-%d %I:%M %p') if log.created_at else '-' }}</td>
+                            <td data-label="User">
+                                <div class="audit-user-cell">
+                                    <strong>{{ log.display_name }}</strong>
+                                    {% if log.display_username %}
+                                    <span>@{{ log.display_username }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td data-label="Role"><span class="role-badge {{ log.user_role or 'system' }}">{{ log.display_role }}</span></td>
+                            <td data-label="Action"><strong>{{ log.action }}</strong></td>
+                            <td class="audit-details-cell" data-label="Details">{{ log.details or '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="empty audit-empty-cell">No audit activity found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="settings-panel about-panel" id="about-palaykita">
+            <div class="about-section-label">
+                <span class="about-info-icon">i</span>
+                <strong>ABOUT</strong>
+            </div>
+
+            <div class="about-showcase">
+                <img class="about-logo" src="{{ url_for('static', filename='icons/palaykita_logo.png') }}" alt="PalayKita logo">
+                <h2 class="about-wordmark"><span class="word-palay">Palay</span><span class="word-kita">Kita</span></h2>
+                <p>Rice Milling Profit Tracker</p>
+                <div class="about-version">Version: {{ app_version }}</div>
+            </div>
+
+            <div class="about-detail-grid">
+                <div><span>Database</span><strong>SQLite</strong></div>
+                <div><span>Backend</span><strong>Flask + SQLAlchemy</strong></div>
+                <div><span>Reports</span><strong>openpyxl (.xlsx)</strong></div>
+                <div><span>Web UI</span><strong>Flask Templates + Vanilla JS</strong></div>
+                <div><span>Web Server</span><strong>Waitress (LAN)</strong></div>
+                <div class="developer-detail-row">
+                    <span>Developer</span>
+                    <button class="developer-tribute-trigger" type="button" data-tribute-trigger>
+                        <strong>John Lloyd Sereno</strong>
+                    </button>
+                </div>
+            </div>
+
+            <p class="about-note">
+                PalayKita runs locally on this computer and can be accessed from phones and tablets on the same Wi-Fi network through Settings &rarr; Web Server.
+            </p>
+
+            <div class="tribute-modal" id="fatherTributeModal" role="dialog" aria-modal="true" aria-label="In loving memory" hidden>
+                <div class="tribute-modal-backdrop" data-tribute-close></div>
+                <div class="tribute-modal-card">
+                    <div class="tribute-mark">
+                        <div class="tribute-emblem" aria-hidden="true">
+                            <span class="tribute-halo"></span>
+                            <span class="tribute-laurel" style="-webkit-mask-image: url('{{ url_for('static', filename='img/award_laurel_wreath.png') }}'); mask-image: url('{{ url_for('static', filename='img/award_laurel_wreath.png') }}');"></span>
+                            <span class="tribute-emblem-text">IN<br>LOVING<br>MEMORY</span>
+                        </div>
+                        <div class="tribute-name">ELMER D. SERENO</div>
+                        <div class="tribute-years">1974 &ndash; 2025</div>
+                    </div>
+                    <div class="tribute-divider" aria-hidden="true"></div>
+                    <p class="tribute-message">Your love, sacrifices, and guidance will always be remembered.</p>
+                    <p class="tribute-footer"><strong>Thank you for everything.</strong></p>
+                    <button class="tribute-close" type="button" data-tribute-close>Close</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+{% endblock %}

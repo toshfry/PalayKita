@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-command-head commercial-command-head">
+    <div>
+        <p class="eyebrow">Commercial Directory</p>
+        <h1>Commercial Customers</h1>
+        <p class="muted">Manage registered buyers, balances, and per-sack sales from one clean workspace.</p>
+    </div>
+    <div class="command-actions">
+        <a class="btn btn-light" href="{{ url_for('main.commercial_report_page') }}">View Report</a>
+        <a class="btn btn-primary" href="{{ url_for('main.new_transaction', type='commercial') }}">+ Commercial Sale</a>
+    </div>
+</div>
+
+<div class="directory-summary-strip">
+    <div>
+        <span>Total Customers</span>
+        <strong>{{ stats.total }}</strong>
+    </div>
+    <div>
+        <span>Active</span>
+        <strong>{{ stats.active }}</strong>
+    </div>
+    <div>
+        <span>Inactive</span>
+        <strong>{{ stats.inactive }}</strong>
+    </div>
+    <div>
+        <span>Current View</span>
+        <strong>{{ customers|length }}</strong>
+    </div>
+</div>
+
+<details class="directory-create-panel" open>
+    <summary>
+        <span>Add Commercial Customer</span>
+        <small>Register a customer before saving commercial transactions.</small>
+    </summary>
+
+    <form method="post" action="{{ url_for('main.create_commercial_customer') }}" class="commercial-customer-form premium-form">
+        <div class="premium-form-grid">
+            <div>
+                <label>Customer Name *</label>
+                <input type="text" name="name" placeholder="Example: Golden Grain Trading" required>
+            </div>
+
+            <div>
+                <label>Contact Number</label>
+                <input type="text" name="contact_number" placeholder="09XX XXX XXXX">
+            </div>
+
+            <div>
+                <label>Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+
+            <div class="span-2">
+                <label>Address</label>
+                <textarea name="address" rows="2" placeholder="Customer address"></textarea>
+            </div>
+
+            <div>
+                <label>Notes</label>
+                <textarea name="notes" rows="2" placeholder="Payment terms, delivery note, or reminder"></textarea>
+            </div>
+        </div>
+
+        <div class="form-footer-actions">
+            <button class="btn btn-primary" type="submit">Save Customer</button>
+        </div>
+    </form>
+</details>
+
+<form class="directory-toolbar" method="get">
+    <div class="directory-search">
+        <label>Search Customers</label>
+        <input type="search" name="search" value="{{ search }}" placeholder="Search name, contact, address, or notes">
+    </div>
+
+    <div>
+        <label>Status</label>
+        <select name="status">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+            <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Apply</button>
+    <a class="btn btn-light" href="{{ url_for('main.commercial_customers') }}">Clear</a>
+</form>
+
+<div class="premium-customer-directory">
+    {% for customer in customers %}
+    <article class="premium-customer-card {% if customer.status == 'Inactive' %}is-inactive{% endif %}">
+        <div class="customer-card-main">
+            <div class="customer-avatar">{{ customer.name[:2].upper() }}</div>
+            <div class="customer-title-block">
+                <div class="customer-title-row">
+                    <h2>{{ customer.name }}</h2>
+                    <span class="status-badge {% if customer.status == 'Active' %}active{% else %}disabled{% endif %}">
+                        {{ customer.status }}
+                    </span>
+                </div>
+                <p>{{ customer.contact_number or 'No contact number' }}</p>
+            </div>
+        </div>
+
+        <div class="premium-meta-grid">
+            <div>
+                <span>Address</span>
+                <strong>{{ customer.address or '-' }}</strong>
+            </div>
+            <div>
+                <span>Transactions</span>
+                <strong>{{ customer.commercial_transactions|length }}</strong>
+            </div>
+        </div>
+
+        {% if customer.notes %}
+        <div class="customer-note-box">{{ customer.notes }}</div>
+        {% endif %}
+
+        <div class="customer-primary-actions">
+            <a class="btn btn-light" href="{{ url_for('main.commercial_customer_detail', customer_id=customer.id) }}">View Details</a>
+            {% if customer.status == 'Active' %}
+            <a class="btn btn-primary" href="{{ url_for('main.new_transaction', type='commercial', customer_id=customer.id) }}">New Sale</a>
+            {% endif %}
+        </div>
+
+        <details class="premium-inline-drawer">
+            <summary>Edit Customer</summary>
+            <form method="post" action="{{ url_for('main.edit_commercial_customer', customer_id=customer.id) }}" class="premium-form">
+                <div class="premium-form-grid">
+                    <div>
+                        <label>Customer Name</label>
+                        <input type="text" name="name" value="{{ customer.name }}" required>
+                    </div>
+
+                    <div>
+                        <label>Contact Number</label>
+                        <input type="text" name="contact_number" value="{{ customer.contact_number or '' }}">
+                    </div>
+
+                    <div class="span-2">
+                        <label>Address</label>
+                        <textarea name="address" rows="2">{{ customer.address or '' }}</textarea>
+                    </div>
+
+                    <div>
+                        <label>Notes</label>
+                        <textarea name="notes" rows="2">{{ customer.notes or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="form-footer-actions">
+                    <button class="btn btn-light" type="submit">Save Changes</button>
+                </div>
+            </form>
+        </details>
+
+        <div class="customer-management-actions">
+            {% if customer.status == 'Active' %}
+            <form method="post" action="{{ url_for('main.deactivate_commercial_customer', customer_id=customer.id) }}" onsubmit="return confirm('Deactivate this commercial customer? Existing records and history will stay available.')">
+                <button class="btn btn-light" type="submit">Deactivate</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('main.reactivate_commercial_customer', customer_id=customer.id) }}" onsubmit="return confirm('Reactivate this commercial customer?')">
+                <button class="btn btn-primary" type="submit">Reactivate</button>
+            </form>
+            {% endif %}
+
+            <form class="delete-customer-form" method="post" action="{{ url_for('main.delete_commercial_customer', customer_id=customer.id) }}" onsubmit="return confirm('Permanently delete this commercial customer? This cannot be undone. Customers with transaction history should be deactivated instead.')">
+                <button class="btn btn-danger-outline customer-delete-action" type="submit" aria-label="Permanently delete {{ customer.name }}" title="Permanently delete customer">
+                    <span class="delete-action-icon" aria-hidden="true"></span>
+                    <span>Delete</span>
+                </button>
+            </form>
+        </div>
+    </article>
+    {% else %}
+    <div class="premium-empty-state">
+        <strong>No commercial customers found.</strong>
+        <p class="muted">Add a customer or adjust the filters.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

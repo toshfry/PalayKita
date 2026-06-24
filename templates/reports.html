@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="section-head">
+    <div>
+        <h1>Excel Reports</h1>
+        {% if desktop_mode %}
+        <p class="muted">Generate reports and export Excel files to any folder on this computer.</p>
+        {% else %}
+        <p class="muted">Generate and download professional .xlsx reports.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if desktop_mode %}
+<div class="desktop-export-note">
+    <strong>Desktop mode:</strong> Reports are saved inside PalayKita first. Click <strong>Export</strong> beside a generated report to choose where to save the Excel file. Phone/web access still uses <strong>Download</strong>.
+</div>
+{% endif %}
+
+{% if audit_report_ready %}
+<div class="alert alert-success prepared-report-message">
+    Audit Log report is ready for export. Click Export to download the Excel file.
+</div>
+{% endif %}
+
+<div class="report-actions">
+    <form method="post" action="{{ url_for('main.generate_report', report_type='today') }}">
+        <button class="btn btn-primary full" type="submit">Generate Today’s Excel Report</button>
+    </form>
+
+    <form method="post" action="{{ url_for('main.generate_report', report_type='yesterday') }}">
+        <button class="btn btn-light full" type="submit">Generate Yesterday’s Excel Report</button>
+    </form>
+
+    <form method="post" action="{{ url_for('main.generate_report', report_type='weekly') }}">
+        <button class="btn btn-light full" type="submit">Generate Weekly Excel Report</button>
+    </form>
+
+    <form method="post" action="{{ url_for('main.generate_report', report_type='monthly') }}">
+        <button class="btn btn-light full" type="submit">Generate Monthly Excel Report</button>
+    </form>
+
+    <a class="btn btn-primary full report-action-span" href="{{ url_for('main.commercial_report_page') }}">Commercial Customer Report</a>
+</div>
+
+<form class="form-card report-custom-card" method="post" action="{{ url_for('main.generate_report', report_type='custom') }}">
+    <h2>Custom Date Range Report</h2>
+
+    <div class="form-grid report-custom-grid">
+        <div>
+            <label>Start Date</label>
+            <input type="date" name="start_date" required>
+        </div>
+
+        <div>
+            <label>End Date</label>
+            <input type="date" name="end_date" required>
+        </div>
+
+        <div>
+            <label>Payment Status</label>
+            <select name="status">
+                <option value="all">All</option>
+                <option value="Paid">Paid</option>
+                <option value="Partial">Partial</option>
+                <option value="Unpaid">Unpaid</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn btn-primary full" type="submit">Generate Custom Date Report</button>
+</form>
+
+<div class="section-head small">
+    <h2>Recent Generated Reports</h2>
+</div>
+
+<div class="table-card reports-table-card">
+    <table class="reports-table">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Folder</th>
+                <th>Date Generated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for file in files %}
+            <tr class="{% if prepared_report and file.name == prepared_report %}prepared-report-row{% endif %}">
+                <td>{{ file.name }}</td>
+                <td>{{ file.folder }}</td>
+                <td>{{ file.created.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                <td class="actions">
+                    {% if desktop_mode %}
+                    <a href="{{ url_for('main.export_report', path=file.path) }}">Export</a>
+                    {% else %}
+                    <a href="{{ url_for('main.download_report', path=file.path) }}">Download</a>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('main.delete_report') }}" onsubmit="return confirm('Delete this report?')">
+                        <input type="hidden" name="path" value="{{ file.path }}">
+                        <button class="danger-link" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4" class="empty">No generated reports yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

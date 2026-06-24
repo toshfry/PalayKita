@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Werkzeug
+waitress
+openpyxl
+python-dotenv
+pywebview

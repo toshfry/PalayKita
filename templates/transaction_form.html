@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set readonly = mode == "view" %}
+{% set txn_type = transaction_type|default('local') %}
+{% set commercial_customers = commercial_customers|default([]) %}
+{% set selected_commercial_customer_id = selected_commercial_customer_id|default('')|string %}
+{% set commercial_enabled = commercial_enabled|default(true) %}
+{% set default_customer_name = default_customer_name|default('') %}
+{% set form_back_url = back_url|default(url_for('main.transactions')) %}
+
+<div class="section-head">
+    {% if mode == "new" %}
+        <h1>New Transaction</h1>
+    {% elif mode == "edit" and txn_type == "commercial" %}
+        <h1>Edit Commercial Transaction</h1>
+    {% elif mode == "edit" %}
+        <h1>Edit Transaction</h1>
+    {% elif txn_type == "commercial" %}
+        <h1>View Commercial Transaction</h1>
+    {% else %}
+        <h1>View Transaction</h1>
+    {% endif %}
+    <a class="btn btn-light" href="{{ form_back_url }}">Back</a>
+</div>
+
+{% if transaction %}
+<div class="info-strip">
+    <strong>{{ transaction.transaction_number }}</strong>
+    <span>{{ transaction.payment_status }}</span>
+</div>
+{% endif %}
+
+{% if not commercial_enabled and mode == "new" %}
+<div class="warning-box">Commercial transactions are disabled in Settings.</div>
+{% endif %}
+
+{% if mode == "new" and saved_ticket and settings.ticket_printing_enabled and settings.ticket_show_after_save %}
+<div class="ticket-print-banner {% if txn_type != 'local' %}hidden{% endif %}" id="ticketPrintBanner">
+    <div class="ticket-print-banner-info">
+        <strong>Transaction saved successfully.</strong>
+        <span>Local Ticket #{{ saved_ticket_number }} &middot; {{ saved_ticket.customer_name }}</span>
+    </div>
+    <button type="button" class="btn btn-primary ticket-print-btn"
+        onclick="printLocalTicket('{{ url_for('main.local_ticket', transaction_id=saved_ticket.id) }}')">
+        Print Ticket
+    </button>
+    <p class="ticket-print-error hidden" id="ticketPrintError" role="alert">
+        Transaction saved, but ticket printing failed. You can reprint the ticket.
+    </p>
+</div>
+{% endif %}
+
+<form method="post" class="form-card txn-form-card txn-type-{{ txn_type }}" id="transactionForm" data-readonly="{% if readonly %}true{% else %}false{% endif %}">
+    <input type="hidden" name="transaction_type" id="transactionType" value="{{ txn_type }}">
+
+    {% if mode == "new" %}
+    <div class="txn-command-bar">
+        <div class="txn-type-switch" role="tablist" aria-label="Transaction type">
+            <button type="button" class="txn-type-btn {% if txn_type == 'local' %}active{% endif %}" data-txn-type="local">
+                Local Transaction
+            </button>
+            <button type="button" class="txn-type-btn {% if txn_type == 'commercial' %}active{% endif %}" data-txn-type="commercial" {% if not commercial_enabled %}disabled{% endif %}>
+                Commercial Transaction
+            </button>
+        </div>
+        <button class="txn-save-btn" type="submit">Save Transaction</button>
+    </div>
+    {% endif %}
+
+    <section class="txn-section {% if txn_type != 'local' %}hidden{% endif %}" data-txn-section="local">
+        <div class="calc-box">
+            <div><span>Gross Milling Fee</span><strong id="grossPreview">&#8369;0.00</strong></div>
+            <div><span>Rice Chaff Deduction</span><strong id="chaffPreview">&#8369;0.00</strong></div>
+            <div><span>Net Amount</span><strong id="netPreview">&#8369;0.00</strong></div>
+            <div><span>Balance</span><strong id="balancePreview">&#8369;0.00</strong></div>
+            <div><span>Status</span><strong id="statusPreview">Paid</strong></div>
+        </div>
+
+        <div class="form-grid txn-form-grid">
+            <div>
+                <label>Transaction Date</label>
+                <input type="date" name="transaction_date" value="{{ (transaction.transaction_date if transaction else today).strftime('%Y-%m-%d') }}" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Customer / Owner Name</label>
+                <input type="text" name="customer_name" value="{{ transaction.customer_name if transaction else (default_customer_name if txn_type == 'local' else '') }}" placeholder="Editable customer name" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Contact Number</label>
+                <input type="text" name="contact_number" value="{{ transaction.contact_number if transaction else '' }}" placeholder="Optional" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Kilos Milled *</label>
+                <input type="number" step="0.01" min="0.01" name="kilos_milled" id="kilos" value="{{ transaction.kilos_milled if transaction else '' }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Milling Rate per Kilo *</label>
+                <input type="number" step="0.01" min="0" name="milling_rate_per_kg" id="millingRate" value="{{ default_milling_rate }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Amount Paid *</label>
+                <input type="number" step="0.01" min="0" name="amount_paid" id="amountPaid" value="{{ transaction.amount_paid if transaction else 0 }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Rice Chaff Sold to Mill?</label>
+                <select name="has_chaff_deduction" id="hasChaff" {% if readonly or txn_type != 'local' %}disabled{% endif %}>
+                    <option value="no" {% if not transaction or not transaction.has_chaff_deduction %}selected{% endif %}>No</option>
+                    <option value="yes" {% if transaction and transaction.has_chaff_deduction %}selected{% endif %}>Yes</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Rice Chaff Kilos</label>
+                <input type="number" step="0.01" min="0" name="chaff_kilos" id="chaffKilos" value="{{ transaction.chaff_kilos if transaction else 0 }}" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Rice Chaff Rate per Kilo</label>
+                <input type="number" step="0.01" min="0" name="chaff_rate_per_kg" id="chaffRate" value="{{ default_chaff_rate }}" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Payment Method</label>
+                <select name="payment_method" {% if readonly or txn_type != 'local' %}disabled{% endif %}>
+                    {% set method = transaction.payment_method if transaction else 'Cash' %}
+                    <option value="Cash" {% if method == "Cash" %}selected{% endif %}>Cash</option>
+                    <option value="GCash" {% if method == "GCash" %}selected{% endif %}>GCash</option>
+                    <option value="Bank Transfer" {% if method == "Bank Transfer" %}selected{% endif %}>Bank Transfer</option>
+                    <option value="Other" {% if method == "Other" %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div class="span-3">
+                <label>Notes</label>
+                <textarea name="notes" rows="3" {% if readonly %}readonly{% endif %} {% if txn_type != 'local' %}disabled{% endif %}>{{ transaction.notes if transaction else '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="warning-box hidden" id="nameWarning">
+            This transaction has an unpaid balance. Add customer name so you can track who owes this amount.
+        </div>
+    </section>
+
+    <section class="txn-section {% if txn_type != 'commercial' %}hidden{% endif %}" data-txn-section="commercial">
+        <div class="calc-box commercial-calc-box">
+            <div><span>Gross Commercial Fee</span><strong id="commercialGrossPreview">&#8369;0.00</strong></div>
+            <div><span>Net Amount</span><strong id="commercialNetPreview">&#8369;0.00</strong></div>
+            <div><span>Balance</span><strong id="commercialBalancePreview">&#8369;0.00</strong></div>
+            <div><span>Status</span><strong id="commercialStatusPreview">{{ default_commercial_payment_status|default('Unpaid') }}</strong></div>
+        </div>
+
+        <div class="form-grid txn-form-grid">
+            <div>
+                <label>Transaction Date</label>
+                <input type="date" name="transaction_date" value="{{ (transaction.transaction_date if transaction else today).strftime('%Y-%m-%d') }}" {% if readonly %}readonly{% endif %} {% if txn_type != 'commercial' %}disabled{% endif %}>
+            </div>
+
+            {% if mode != "new" and txn_type == "commercial" %}
+            <div class="span-2">
+                <label>Commercial Customer *</label>
+                <input type="text" value="{{ transaction.customer.name if transaction.customer else 'Registered customer' }}" readonly>
+                <input type="hidden" name="commercial_customer_id" value="{{ transaction.customer_id }}">
+            </div>
+            {% else %}
+            <div class="span-2 customer-select-line">
+                <div>
+                    <label>Commercial Customer *</label>
+                    <select name="commercial_customer_id" id="commercialCustomer" required {% if txn_type != 'commercial' %}disabled{% endif %}>
+                        <option value="">Select registered customer</option>
+                        {% for customer in commercial_customers %}
+                        <option value="{{ customer.id }}" {% if selected_commercial_customer_id == customer.id|string %}selected{% endif %}>
+                            {{ customer.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="btn btn-light" type="button" onclick="openCustomerModal()" {% if not commercial_enabled %}disabled{% endif %}>+ Add</button>
+            </div>
+            {% endif %}
+
+            <div>
+                <label>Number of Sacks *</label>
+                <input type="number" step="0.01" min="0.01" name="number_of_sacks" id="commercialSacks" value="{{ transaction.number_of_sacks if transaction and txn_type == 'commercial' else '' }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'commercial' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Price per Sack *</label>
+                <input type="number" step="0.01" min="0.01" name="price_per_sack" id="commercialPrice" value="{{ transaction.price_per_sack if transaction and txn_type == 'commercial' else default_commercial_price }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'commercial' %}disabled{% endif %}>
+            </div>
+
+            {% if mode != "new" and txn_type == "commercial" %}
+            <div>
+                <label>Total Amount *</label>
+                <input type="number" step="0.01" min="0" name="total_amount" id="commercialTotalAmount" value="{{ transaction.total_amount }}" required {% if readonly %}readonly{% endif %}>
+            </div>
+            {% endif %}
+
+            <div>
+                <label>Amount Paid *</label>
+                <input type="number" step="0.01" min="0" name="amount_paid" id="commercialAmountPaid" value="{{ transaction.amount_paid if transaction and txn_type == 'commercial' else 0 }}" required {% if readonly %}readonly{% endif %} {% if txn_type != 'commercial' %}disabled{% endif %}>
+            </div>
+
+            <div>
+                <label>Payment Method</label>
+                {% set commercial_method = transaction.payment_method if transaction and txn_type == 'commercial' else 'Cash' %}
+                <select name="payment_method" {% if readonly or txn_type != 'commercial' %}disabled{% endif %}>
+                    <option value="Cash" {% if commercial_method == "Cash" %}selected{% endif %}>Cash</option>
+                    <option value="GCash" {% if commercial_method == "GCash" %}selected{% endif %}>GCash</option>
+                    <option value="Bank Transfer" {% if commercial_method == "Bank Transfer" %}selected{% endif %}>Bank Transfer</option>
+                    <option value="Other" {% if commercial_method == "Other" %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Payment Status</label>
+                <select name="payment_status" id="commercialPaymentStatus" {% if readonly or txn_type != 'commercial' %}disabled{% endif %}>
+                    {% set commercial_status = transaction.payment_status if transaction and txn_type == 'commercial' else default_commercial_payment_status|default('Unpaid') %}
+                    <option value="Paid" {% if commercial_status == "Paid" %}selected{% endif %}>Paid</option>
+                    <option value="Partial" {% if commercial_status == "Partial" %}selected{% endif %}>Partial</option>
+                    <option value="Unpaid" {% if commercial_status == "Unpaid" %}selected{% endif %}>Unpaid</option>
+                </select>
+            </div>
+
+            {% if commercial_notes_enabled|default(true) %}
+            <div class="span-3">
+                <label>Notes</label>
+                <textarea name="notes" rows="3" {% if readonly %}readonly{% endif %} {% if txn_type != 'commercial' %}disabled{% endif %}>{{ transaction.notes if transaction and txn_type == 'commercial' else '' }}</textarea>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if not readonly and mode != "new" %}
+    <button class="btn btn-primary full" type="submit">Update Transaction</button>
+    {% elif readonly %}
+    <a class="btn btn-primary full" href="{{ url_for('main.edit_transaction', transaction_id=transaction.id) }}">Edit Transaction</a>
+    {% endif %}
+</form>
+
+{% if mode == "new" %}
+<div class="modal hidden" id="customerModal">
+    <div class="modal-card wide-modal">
+        <h2>Add Commercial Customer</h2>
+        <form method="post" action="{{ url_for('main.quick_create_commercial_customer') }}">
+            <label>Customer Name *</label>
+            <input type="text" name="name" required>
+
+            <label>Contact Number</label>
+            <input type="text" name="contact_number">
+
+            <label>Address</label>
+            <textarea name="address" rows="2"></textarea>
+
+            <label>Notes</label>
+            <textarea name="notes" rows="2"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn btn-light" type="button" onclick="closeCustomerModal()">Cancel</button>
+                <button class="btn btn-primary" type="submit">Save Customer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
